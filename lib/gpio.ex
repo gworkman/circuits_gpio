@@ -109,6 +109,9 @@ defmodule Circuits.GPIO do
   @typedoc "Pull mode for platforms that support controllable pullups and pulldowns"
   @type pull_mode() :: :not_set | :none | :pullup | :pulldown
 
+  @typedoc "Drive mode for platforms that support push-pull, open-drain, and open-source"
+  @type drive_mode() :: :push_pull | :open_drain | :open_source
+
   @typedoc """
   Ways of referring to a GPIO
 
@@ -147,11 +150,13 @@ defmodule Circuits.GPIO do
     using it.
   * `:direction` - whether this GPIO is an input or output
   * `:pull_mode` - if this GPIO is an input, then this is the pull mode
+  * `:drive_mode` - how the GPIO is driven (push-pull, open-drain, or open-source)
   """
   @type status() :: %{
           consumer: String.t(),
           direction: direction(),
-          pull_mode: pull_mode()
+          pull_mode: pull_mode(),
+          drive_mode: drive_mode()
         }
 
   @typedoc """
@@ -259,6 +264,7 @@ defmodule Circuits.GPIO do
       |> Keyword.merge(options)
       |> Keyword.put_new(:initial_value, 0)
       |> Keyword.put_new(:pull_mode, :not_set)
+      |> Keyword.put_new(:drive_mode, :push_pull)
 
     backend.open(gpio_spec, direction, all_options)
   end
@@ -292,6 +298,13 @@ defmodule Circuits.GPIO do
   defp check_options!([{:pull_mode, value} | rest]) do
     if value not in [:not_set, :pullup, :pulldown, :none],
       do: raise(ArgumentError, ":pull_mode should be :not_set, :pullup, :pulldown, or :none")
+
+    check_options!(rest)
+  end
+
+  defp check_options!([{:drive_mode, value} | rest]) do
+    if value not in [:push_pull, :open_drain, :open_source],
+      do: raise(ArgumentError, ":drive_mode should be :push_pull, :open_drain, or :open_source")
 
     check_options!(rest)
   end
@@ -409,6 +422,12 @@ defmodule Circuits.GPIO do
   """
   @spec set_pull_mode(Handle.t(), pull_mode()) :: :ok | {:error, atom()}
   defdelegate set_pull_mode(gpio, pull_mode), to: Handle
+
+  @doc """
+  Set the drive mode (push-pull, open-drain, or open-source)
+  """
+  @spec set_drive_mode(Handle.t(), drive_mode()) :: :ok | {:error, atom()}
+  defdelegate set_drive_mode(gpio, drive_mode), to: Handle
 
   @doc """
   Return info about the low level GPIO interface
